@@ -10,4 +10,5 @@ motor==3.4.0
 pymongo==4.8.0
 pydantic-mongo==2.3.0
 openai==1.35.13
-cohere==5.5.8
+httpx==0.27.2
+cohere==5.2.0
