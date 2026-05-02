@@ -23,6 +23,7 @@ class CoHereProvider(LLMInterface):
 
         self.client = cohere.Client(api_key=self.api_key)
 
+        self.enums = CoHereEnums
         self.logger = logging.getLogger(__name__)
 
     def set_generation_model(self, model_id: str):
@@ -63,7 +64,8 @@ class CoHereProvider(LLMInterface):
         
         return response.text
     
-    def embed_text(self, text: str, document_type: str = None):
+    # def embed_text(self, text: str, document_type: str = None):
+    def embed_text(self, text: any, document_type: str = None): # 'any' to allow list
         if not self.client:
             self.logger.error("CoHere client was not set")
             return None
@@ -78,7 +80,8 @@ class CoHereProvider(LLMInterface):
 
         response = self.client.embed(
             model = self.embedding_model_id,
-            texts = [self.process_text(text)],
+            # If it's a list, process each text; otherwise, make it a list of one
+            texts = [self.process_text(t) for t in text] if isinstance(text, list) else [self.process_text(text)],
             input_type = input_type,
             embedding_types=['float'],
         )
@@ -87,7 +90,10 @@ class CoHereProvider(LLMInterface):
             self.logger.error("Error while embedding text with CoHere")
             return None
         
-        return response.embeddings.float[0]
+        # return response.embeddings.float[0]
+        # Return the whole list of vectors if input was a list, otherwise just the first one
+        return response.embeddings.float if isinstance(text, list) else response.embeddings.float[0]
+
     
     def construct_prompt(self, prompt: str, role: str):
         return {
