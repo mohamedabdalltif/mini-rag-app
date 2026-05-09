@@ -75,8 +75,8 @@ class OpenAIProvider(LLMInterface):
         return response.choices[0].message.content
 
 
-    def embed_text(self, text: str, document_type: str = None):
-        
+    def embed_text(self, text: any, document_type: str = None):  # 'any' to allow list
+    
         if not self.client:
             self.logger.error("OpenAI client was not set")
             return None
@@ -84,22 +84,24 @@ class OpenAIProvider(LLMInterface):
         if not self.embedding_model_id:
             self.logger.error("Embedding model for OpenAI was not set")
             return None
-        
+
         response = self.client.embeddings.create(
-            model = self.embedding_model_id,
-            input = text,
+            model=self.embedding_model_id,
+            # If it's a list, process each text; otherwise, make it a list of one
+            input=[self.process_text(t) for t in text] if isinstance(text, list) else [self.process_text(text)],
         )
 
-        if not response or not response.data or len(response.data) == 0 or not response.data[0].embedding:
+        if not response or not response.data or len(response.data) == 0:
             self.logger.error("Error while embedding text with OpenAI")
             return None
 
-        return response.data[0].embedding
+        # Return the whole list of vectors if input was a list, otherwise just the first one
+        return [item.embedding for item in response.data] if isinstance(text, list) else response.data[0].embedding
 
     def construct_prompt(self, prompt: str, role: str):
         return {
             "role": role,
-            "content": self.process_text(prompt)
+            "content": prompt
         }
     
 
