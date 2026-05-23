@@ -2,6 +2,7 @@ from ..LLMInterface import LLMInterface
 from ..LLMEnums import OpenAIEnums
 from openai import OpenAI
 import logging
+from typing import List, Union
 
 class OpenAIProvider(LLMInterface):
 
@@ -25,6 +26,7 @@ class OpenAIProvider(LLMInterface):
         client_params = {"api_key": self.api_key}
         if self.api_url:  
             client_params["base_url"] = self.api_url
+            
 
         self.client = OpenAI(
             **client_params
@@ -75,11 +77,14 @@ class OpenAIProvider(LLMInterface):
         return response.choices[0].message.content
 
 
-    def embed_text(self, text: any, document_type: str = None):  # 'any' to allow list
+    def embed_text(self, text: Union[str, List[str]], document_type: str = None):  # 'any' to allow list
     
         if not self.client:
             self.logger.error("OpenAI client was not set")
             return None
+        
+        if isinstance(text, str):
+            text = [text]
 
         if not self.embedding_model_id:
             self.logger.error("Embedding model for OpenAI was not set")
@@ -87,16 +92,15 @@ class OpenAIProvider(LLMInterface):
 
         response = self.client.embeddings.create(
             model=self.embedding_model_id,
-            # If it's a list, process each text; otherwise, make it a list of one
-            input=[self.process_text(t) for t in text] if isinstance(text, list) else [self.process_text(text)],
+            input=text,
+            
         )
 
         if not response or not response.data or len(response.data) == 0:
             self.logger.error("Error while embedding text with OpenAI")
             return None
 
-        # Return the whole list of vectors if input was a list, otherwise just the first one
-        return [item.embedding for item in response.data] if isinstance(text, list) else response.data[0].embedding
+        return [ rec.embedding for rec in response.data ]
 
     def construct_prompt(self, prompt: str, role: str):
         return {
